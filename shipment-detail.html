@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出货明细 | Shipment Detail</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f5f7fa;
+  --bg2: #ffffff;
+  --ink: #1f2937;
+  --muted: #6b7280;
+  --rule: #d1d5db;
+  --accent: #2563eb;
+  --accent2: #059669;
+  --danger: #dc2626;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 操作栏 */
+.toolbar {
+  background: var(--bg2);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.toolbar .form-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.toolbar select {
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 13px;
+  min-width: 200px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.btn:hover { opacity: 0.9; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-success { background: var(--accent2); color: #fff; }
+.btn-secondary { background: var(--bg); color: var(--ink); border: 1px solid var(--rule); }
+
+/* 文档预览区域 */
+.doc-container {
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+
+.doc-preview {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* 公司抬头 */
+.company-header {
+  text-align: center;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 20px;
+}
+
+.company-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.company-header h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.company-header .company-info {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.company-header .company-info span {
+  margin: 0 8px;
+}
+
+/* 文档标题 */
+.doc-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 20px 0;
+  color: var(--ink);
+}
+
+/* 信息区域 */
+.info-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.info-box {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.info-box h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+
+.info-box p {
+  margin: 4px 0;
+  color: var(--ink);
+}
+
+/* 表格容器 */
+.table-container {
+  overflow-x: auto;
+  margin: 16px 0;
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+
+/* 表格 */
+.doc-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.doc-table th, .doc-table td {
+  border: 1px solid #333;
+  padding: 6px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.doc-table th {
+  background: #f0f0f0;
+  font-weight: 600;
+  text-align: center;
+}
+
+.doc-table td {
+  text-align: center;
+}
+
+.doc-table td.left {
+  text-align: left;
+}
+
+.doc-table td.merged-cell {
+  background: #fafafa;
+}
+
+/* 汇总行 */
+.summary-row {
+  font-weight: 600;
+  background: #f9f9f9;
+}
+
+/* 签章区域 */
+.signature-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 40px;
+  padding-top: 20px;
+}
+
+.signature-box {
+  text-align: center;
+}
+
+.signature-box h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 60px;
+}
+
+.signature-line {
+  border-top: 1px solid var(--ink);
+  margin-top: 20px;
+  padding-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 页脚 */
+.doc-footer {
+  text-align: center;
+  margin-top: 30px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 打印样式 */
+@media print {
+  .toolbar { display: none !important; }
+  body { background: #fff; }
+  .doc-container { max-width: 100%; margin: 0; padding: 0; }
+  .doc-preview { 
+    box-shadow: none; 
+    border: none; 
+    padding: 20px;
+  }
+  .doc-table th, .doc-table td {
+    border: 1px solid #000;
+  }
+}
+
+/* 空数据提示 */
+.empty-message {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* 日期输入 */
+.toolbar input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.toolbar input[type="text"] {
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 13px;
+  width: 150px;
+}
+</style>
+</head>
+<body>
+
+<!-- 操作栏 -->
+<div class="toolbar">
+  <div class="form-group">
+    <label>装货地址：</label>
+    <select id="loadingAddressSelect" onchange="updateLoadingAddress()">
+      <option value="">-- 选择公司 --</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>出货日期：</label>
+    <input type="date" id="shipmentDate" onchange="updateDate()">
+  </div>
+  <div class="form-group">
+    <label>单据编号：</label>
+    <input type="text" id="docNo" placeholder="自动生成" readonly>
+  </div>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="printDocument()">打印 Print</button>
+  <button class="btn btn-success" onclick="exportToExcel()">导出Excel</button>
+  <button class="btn btn-secondary" onclick="window.close()">关闭</button>
+</div>
+
+<!-- 文档预览 -->
+<div class="doc-container">
+  <div class="doc-preview" id="docPreview">
+    <!-- 公司抬头 -->
+    <div class="company-header" id="companyHeader">
+      <h1 id="companyNameCn">公司名称</h1>
+      <h2 id="companyNameEn">Company Name</h2>
+    </div>
+
+    <!-- 文档标题 -->
+    <div class="doc-title">出货明细单 SHIPMENT DETAIL</div>
+
+    <!-- 信息区域 -->
+    <div class="info-section">
+      <div class="info-box">
+        <h4>发货人 Shipper</h4>
+        <p id="shipperInfo">请选择装货地址</p>
+      </div>
+      <div class="info-box">
+        <h4>收货人 Consignee</h4>
+        <p id="consigneeInfo">-</p>
+      </div>
+    </div>
+
+    <!-- 装货信息 -->
+    <div class="info-section">
+      <div class="info-box">
+        <h4>装货地址 Loading Address</h4>
+        <p id="loadingAddress">请选择装货地址</p>
+      </div>
+      <div class="info-box">
+        <h4>出货信息 Shipment Info</h4>
+        <p>出货日期：<span id="displayDate">-</span></p>
+        <p>单据编号：<span id="displayDocNo">-</span></p>
+        <p>柜型：<span id="displayContainerType">-</span></p>
+      </div>
+    </div>
+
+    <!-- 明细表格 -->
+    <div class="table-container">
+      <table class="doc-table" id="detailTable">
+        <thead>
+          <tr>
+            <th style="width:30px">序号</th>
+            <th>订单号</th>
+            <th>图号</th>
+            <th>规格型号</th>
+            <th>数量</th>
+            <th>木箱尺寸</th>
+            <th>木箱数</th>
+            <th>净重(KG)</th>
+            <th>毛重(KG)</th>
+            <th>体积(M³)</th>
+          </tr>
+        </thead>
+        <tbody id="detailBody">
+        </tbody>
+        <tfoot>
+          <tr class="summary-row">
+            <td colspan="4">合计 Total</td>
+            <td id="totalQty">0</td>
+            <td>-</td>
+            <td id="totalCrateQty">0</td>
+            <td id="totalNw">0</td>
+            <td id="totalGw">0</td>
+            <td id="totalVolume">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- 备注 -->
+    <div style="margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+      <label style="display: block; font-weight: 500; margin-bottom: 8px; font-size: 14px;">备注 Remarks</label>
+      <textarea id="remarksInput" rows="3" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; resize: vertical;" placeholder="请输入备注内容..."></textarea>
+    </div>
+
+    <!-- 日期 -->
+    <div style="text-align: right; margin-top: 40px; padding-top: 20px; border-top: 1px solid #d1d5db;">
+      <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">制单人: AlonZhang</div>
+      <div style="font-size: 13px; color: #6b7280;">日期 Date: <span id="signatureDate"></span></div>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="doc-footer">
+      <p>本单据仅供参考，具体信息以实际出货为准</p>
+      <p>This document is for reference only, actual shipment information may vary</p>
+      <div style="margin-top: 10px; font-size: 12px; color: #6b7280;">
+        第 <span id="currentPage">1</span> 页 / 共 <span id="totalPages">1</span> 页
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 数据存储
+let shipmentData = [];
+let companies = [];
+let customers = [];
+let selectedCompany = null;
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+  loadCompanies();
+  loadCustomers();
+  loadShipmentData();
+  generateDocNo();
+  setSignatureDate();
+});
+
+// 加载客户信息
+function loadCustomers() {
+  const customerRecords = JSON.parse(localStorage.getItem('customerRecords') || '[]');
+  customers = customerRecords.map(c => ({
+    id: c.id,
+    name: c.name || c.customerName || '',
+    address: c.address || ''
+  }));
+}
+
+// 设置签字日期为今日
+function setSignatureDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  document.getElementById('signatureDate').textContent = `${year}-${month}-${day}`;
+}
+
+// 加载公司信息
+function loadCompanies() {
+  companies = JSON.parse(localStorage.getItem('cdg_companies') || '[]');
+  const select = document.getElementById('loadingAddressSelect');
+  
+  select.innerHTML = '<option value="">-- 选择公司 --</option>';
+  companies.forEach(c => {
+    select.innerHTML += `<option value="${c.id}" data-name="${c.nameCn}" data-address="${c.address}" data-phone="${c.phone}" data-email="${c.email}" data-contact="${c.contact}">${c.nameCn}</option>`;
+  });
+  
+  // 默认选择第一个公司
+  if (companies.length > 0) {
+    select.value = companies[0].id;
+    updateLoadingAddress();
+  }
+}
+
+// 更新装货地址
+function updateLoadingAddress() {
+  const select = document.getElementById('loadingAddressSelect');
+  const option = select.selectedOptions[0];
+  
+  if (!option || !option.value) {
+    document.getElementById('loadingAddress').textContent = '请选择装货地址';
+    document.getElementById('shipperInfo').textContent = '请选择装货地址';
+    return;
+  }
+  
+  const company = companies.find(c => c.id == option.value);
+  if (company) {
+    selectedCompany = company;
+    
+    // 清理公司名称
+    const cleanedNameCn = cleanCompanyName(company.nameCn, 'cn');
+    const cleanedNameEn = cleanCompanyName(company.nameEn, 'en');
+    
+    // 更新公司抬头
+    document.getElementById('companyNameCn').textContent = cleanedNameCn;
+    document.getElementById('companyNameEn').textContent = cleanedNameEn;
+    
+    // 更新装货地址
+    document.getElementById('loadingAddress').textContent = company.address || '-';
+    
+    // 更新发货人信息
+    document.getElementById('shipperInfo').innerHTML = `
+      ${cleanedNameCn || '-'}<br>
+      ${cleanedNameEn || '-'}<br>
+      地址: ${company.address || '-'}<br>
+      电话: ${company.phone || '-'}<br>
+      联系人: ${company.contact || '-'}
+    `;
+  }
+}
+
+// 加载出货数据
+function loadShipmentData() {
+  shipmentData = JSON.parse(localStorage.getItem('shipmentDetailData') || '[]');
+  
+  if (shipmentData.length === 0) {
+    document.getElementById('detailBody').innerHTML = '<tr><td colspan="11" class="empty-message">暂无出货数据</td></tr>';
+    return;
+  }
+  
+  renderDetailTable();
+  
+  // 确保客户数据已加载后再更新收货人信息
+  if (!customers || customers.length === 0) {
+    loadCustomers();
+  }
+  updateConsigneeInfo();
+  updateContainerType();
+  
+  // 设置默认日期（使用计划出货日期）
+  if (shipmentData[0].planDate) {
+    document.getElementById('shipmentDate').value = shipmentData[0].planDate;
+    updateDate();
+  }
+}
+
+// 渲染明细表格
+function renderDetailTable() {
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  
+  let totalQty = 0;
+  let totalCrateQty = 0;
+  let totalNw = 0;
+  let totalGw = 0;
+  let totalVolume = 0;
+  
+  // 按订单号分组
+  const orderGroups = {};
+  shipmentData.forEach(item => {
+    const key = item.orderNo || 'unknown';
+    if (!orderGroups[key]) {
+      orderGroups[key] = [];
+    }
+    orderGroups[key].push(item);
+  });
+  
+  let rowIndex = 0;
+  
+  // 遍历每个订单号组
+  Object.values(orderGroups).forEach(group => {
+    // 同一订单号的多行记录是因木箱尺寸不同拆分的，数量取第一行即可
+    const groupTotalQty = parseFloat(group[0]?.qty) || 0;
+    
+    group.forEach((item, groupIndex) => {
+      const qty = parseFloat(item.qty) || 0;
+      const crateQty = parseInt(item.crateQty) || 0;
+      const nw = parseFloat(item.nw) || 0;
+      const gw = parseFloat(item.gw) || 0;
+      const volume = parseFloat(item.volume) || 0;
+      
+      // 数量只在订单号第一行计入总合计，其他行不计入
+      if (groupIndex === 0) {
+        totalQty += groupTotalQty;
+      }
+      totalCrateQty += crateQty;
+      totalNw += nw;
+      totalGw += gw;
+      totalVolume += volume;
+      
+      rowIndex++;
+      
+      // 只有第一行显示订单号、图号、规格型号、数量
+      const isFirstRow = groupIndex === 0;
+      
+      tbody.innerHTML += `<tr>
+        <td>${rowIndex}</td>
+        <td class="left${isFirstRow ? '' : ' merged-cell'}">${isFirstRow ? (item.orderNo || '-') : ''}</td>
+        <td class="left${isFirstRow ? '' : ' merged-cell'}">${isFirstRow ? (item.drawingNo || '-') : ''}</td>
+        <td class="left${isFirstRow ? '' : ' merged-cell'}">${isFirstRow ? (item.spec || '-') : ''}</td>
+        <td${isFirstRow ? '' : ' class="merged-cell"'}>${isFirstRow ? groupTotalQty : ''}</td>
+        <td class="left">${item.crateSize || '-'}</td>
+        <td>${item.crateQty || '-'}</td>
+        <td>${nw.toFixed(2)}</td>
+        <td>${gw.toFixed(2)}</td>
+        <td>${volume.toFixed(3)}</td>
+      </tr>`;
+    });
+  });
+  
+  // 更新汇总
+  document.getElementById('totalQty').textContent = totalQty;
+  document.getElementById('totalCrateQty').textContent = totalCrateQty;
+  document.getElementById('totalNw').textContent = totalNw.toFixed(2);
+  document.getElementById('totalGw').textContent = totalGw.toFixed(2);
+  document.getElementById('totalVolume').textContent = totalVolume.toFixed(3);
+}
+
+// 清理公司名称
+function cleanCompanyName(name, type) {
+  if (!name) return '';
+  
+  if (type === 'cn') {
+    // 中文名称：去掉数字+字母组合和括号（包括括号内的内容）
+    let cleaned = name;
+    // 去掉括号及其内容，如 "(ABC123)"
+    cleaned = cleaned.replace(/\([^)]*\)/g, '');
+    // 去掉数字+字母组合（如 ABC123, A1B2C3 等）
+    cleaned = cleaned.replace(/[A-Za-z0-9]+/g, '');
+    // 去掉多余的空格和横线
+    cleaned = cleaned.replace(/[-_\s]+/g, '').trim();
+    return cleaned || '公司名称';
+  } else {
+    // 英文名称：去掉横线之前的所有内容
+    const parts = name.split('-');
+    if (parts.length > 1) {
+      return parts[parts.length - 1].trim() || 'Company Name';
+    }
+    return name.trim() || 'Company Name';
+  }
+}
+
+// 更新收货人信息
+function updateConsigneeInfo() {
+  // 调试信息
+  console.log('=== 调试 - 更新收货人信息 ===');
+  console.log('shipmentData:', shipmentData);
+  
+  const customerNames = shipmentData.map(s => s.customer).filter(c => c);
+  console.log('从出货数据提取的客户名称:', customerNames);
+  
+  const uniqueCustomers = [...new Set(customerNames)];
+  console.log('去重后的客户:', uniqueCustomers);
+  
+  console.log('customers 数组:', customers);
+  
+  if (uniqueCustomers.length > 0) {
+    let consigneeHtml = '';
+    uniqueCustomers.forEach(customerName => {
+      console.log(`正在查找客户: "${customerName}"`);
+      const customer = customers.find(c => c.name === customerName);
+      console.log(`找到的客户对象:`, customer);
+      const address = customer ? customer.address : '';
+      console.log(`客户 "${customerName}" 的地址: "${address}"`);
+      
+      consigneeHtml += `${customerName}`;
+      if (address) {
+        consigneeHtml += `<br>${address}`;
+      }
+      consigneeHtml += '<br><br>';
+    });
+    document.getElementById('consigneeInfo').innerHTML = consigneeHtml.trim();
+  } else {
+    document.getElementById('consigneeInfo').textContent = '-';
+  }
+}
+
+// 更新柜型
+function updateContainerType() {
+  const containerTypes = shipmentData.map(s => s.containerType).filter(c => c);
+  const uniqueTypes = [...new Set(containerTypes)];
+  
+  if (uniqueTypes.length > 0) {
+    document.getElementById('displayContainerType').textContent = uniqueTypes.join(', ');
+  } else {
+    document.getElementById('displayContainerType').textContent = '-';
+  }
+}
+
+// 更新日期
+function updateDate() {
+  const date = document.getElementById('shipmentDate').value;
+  document.getElementById('displayDate').textContent = date || '-';
+}
+
+// 生成单据编号
+function generateDocNo() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+  
+  const docNo = `SD${year}${month}${day}-${random}`;
+  document.getElementById('docNo').value = docNo;
+  document.getElementById('displayDocNo').textContent = docNo;
+}
+
+// 打印
+function printDocument() {
+  window.print();
+}
+
+// 导出Excel
+function exportToExcel() {
+  if (shipmentData.length === 0) {
+    alert('没有数据可导出');
+    return;
+  }
+  
+  const company = selectedCompany || {};
+  const date = document.getElementById('shipmentDate').value;
+  const docNo = document.getElementById('docNo').value;
+  
+  // 构建数据
+  const headerInfo = [
+    ['出货明细单 SHIPMENT DETAIL'],
+    [],
+    ['发货人:', company.nameCn || '-', '', '单据编号:', docNo],
+    ['发货人(英文):', company.nameEn || '-', '', '出货日期:', date],
+    ['地址:', company.address || '-', '', '柜型:', document.getElementById('displayContainerType').textContent],
+    ['电话:', company.phone || '-', '', '', ''],
+    ['联系人:', company.contact || '-', '', '', ''],
+    [],
+    ['收货人:', document.getElementById('consigneeInfo').textContent],
+    [],
+    ['明细列表:'],
+    ['序号', '订单号', '图号', '规格型号', '数量', '木箱尺寸', '木箱数', '净重(KG)', '毛重(KG)', '体积(M³)', '备注']
+  ];
+  
+  const detailRows = shipmentData.map((item, index) => [
+    index + 1,
+    item.orderNo || '-',
+    item.drawingNo || '-',
+    item.spec || '-',
+    item.qty || '-',
+    item.crateSize || '-',
+    item.crateQty || '-',
+    parseFloat(item.nw || 0).toFixed(2),
+    parseFloat(item.gw || 0).toFixed(2),
+    parseFloat(item.volume || 0).toFixed(3),
+    item.remarks || '-'
+  ]);
+  
+  // 计算汇总
+  const totalQty = shipmentData.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
+  const totalCrateQty = shipmentData.reduce((s, i) => s + (parseInt(i.crateQty) || 0), 0);
+  const totalNw = shipmentData.reduce((s, i) => s + (parseFloat(i.nw) || 0), 0);
+  const totalGw = shipmentData.reduce((s, i) => s + (parseFloat(i.gw) || 0), 0);
+  const totalVolume = shipmentData.reduce((s, i) => s + (parseFloat(i.volume) || 0), 0);
+  
+  const summaryRow = ['合计', '', '', '', totalQty, '', totalCrateQty, totalNw.toFixed(2), totalGw.toFixed(2), totalVolume.toFixed(3), ''];
+  
+  const allData = [...headerInfo, ...detailRows, [], summaryRow];
+  
+  const ws = XLSX.utils.aoa_to_sheet(allData);
+  
+  // 设置列宽
+  ws['!cols'] = [
+    {wch: 6}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 10},
+    {wch: 15}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 20}
+  ];
+  
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '出货明细');
+  
+  const fileName = `出货明细_${docNo}_${date || '无日期'}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+</script>
+
+</body>
+</html>
